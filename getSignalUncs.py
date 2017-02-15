@@ -19,44 +19,37 @@ List = [
 ]
 
 for Type in List:
+   
+   mc=TFile.Open(folder+Type+file_name)
+   tree = mc.Get("ZZTree/candTree")
+   counters = mc.Get("ZZTree/Counters")
+   NGen = counters.GetBinContent(40)
 
    nbins=35 #number of bins in histogram
    lo=105   #Mass range for yields
    hi=140
 
-   #Declare histograms that store nominal distributions
-   h_nom_4mu = TH1F("h_nom_4mu", "h_nom_4mu", nbins, lo, hi)
-   h_nom_4mu.Sumw2()
-
-   h_nom_4e = TH1F("h_nom_4e", "h_nom_4e", nbins, lo, hi)
-   h_nom_4e.Sumw2()
-  
-   h_nom_2e2mu_e = TH1F("hnom_2e2mu_e", "hnom_2e2mu_e", nbins, lo, hi)
-   h_nom_2e2mu_e.Sumw2()
-   
-   h_nom_2e2mu_mu = TH1F("hnom_2e2mu_mu", "hnom_2e2mu_mu", nbins, lo, hi)
-   h_nom_2e2mu_mu.Sumw2()
+   #Declare histogram to calculate nominal value of yields
+   h_nom = TH1F("h_nom", "h_nom", nbins, lo, hi)
    
    #Declare histograms where we store yields
    nbins_yields = 100
-   nom_yield = 20.
+   tree.Draw("ZZMass >> h_nom" , "(abs(LepLepId[0]) == 11 && abs(LepLepId[3]) == 11)*overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
+   nom_yield_4e = h_nom.Integral()
    
-   yield_4mu = TH1F("yield_4mu", "yield_4mu", nbins_yields, nom_yield - 0.5, nom_yield + 0.5)
-   yield_4mu.Sumw2()
+   tree.Draw("ZZMass >> h_nom" , "(abs(LepLepId[0]) == 13 && abs(LepLepId[3]) == 13)*overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
+   nom_yield_4mu = h_nom.Integral()
+   
+   tree.Draw("ZZMass >> h_nom" , "(abs(abs(LepLepId[0]) - (LepLepId[3])) == 2)      *overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
+   nom_yield_2e2mu = h_nom.Integral()
+   
+   yield_4mu = TH1F("yield_4mu", "yield_4mu", nbins_yields, nom_yield_4mu - 0.5, nom_yield_4mu + 0.5)
 
-   yield_4e = TH1F("yield_4e", "yield_4e", nbins_yields, nom_yield - 0.5, nom_yield + 0.5)
-   yield_4e.Sumw2()
+   yield_4e = TH1F("yield_4e", "yield_4e", nbins_yields, nom_yield_4e - 0.5, nom_yield_4e + 0.5)
    
-   yield_2e2mu_e = TH1F("yield_2e2mu_e", "yield_2e2mu_e", nbins_yields, nom_yield - 0.5, nom_yield + 0.5)
-   yield_2e2mu_e.Sumw2()
+   yield_2e2mu_e = TH1F("yield_2e2mu_e", "yield_2e2mu_e", nbins_yields, nom_yield_2e2mu - 0.5, nom_yield_2e2mu + 0.5)
    
-   yield_2e2mu_mu = TH1F("yield_2e2mu_mu", "yield_2e2mu_mu", nbins_yields, nom_yield - 0.5, nom_yield + 0.5)
-   yield_2e2mu_mu.Sumw2()
-
-   mc=TFile.Open(folder+Type+file_name)
-   tree = mc.Get("ZZTree/candTree")
-   counters = mc.Get("ZZTree/Counters")
-   NGen = counters.GetBinContent(40)
+   yield_2e2mu_mu = TH1F("yield_2e2mu_mu", "yield_2e2mu_mu", nbins_yields, nom_yield_2e2mu - 0.5, nom_yield_2e2mu + 0.5)
 
    print "Processing {} ...".format(Type)
    br_data = 0
@@ -77,8 +70,9 @@ for Type in List:
       br_data+=1
       if(br_data % int((tree.GetEntries()/10)) == 0):
          print "{} %".format(str(100*br_data/tree.GetEntries() + 1))
-
+      
       mass4l = tree.ZZMass
+      if( mass4l < 105. or mass4l > 140.): continue #Skip events that are not in the mass window
       idL1 = abs(tree.LepLepId[0])
       idL3 = abs(tree.LepLepId[3])
     
@@ -86,28 +80,16 @@ for Type in List:
       
       #Calculate nominal weigh using central value of SF
       weight_nom = event.overallEventWeight*1000*lumi*event.xsec/NGen
-
-      # Store nominal yields
-      if (idL1==11 and idL3==11):
-         final_state = "4e"
-         h_nom_4e.Fill(mass4l,weight_nom)
-      elif (idL1==13 and idL3==13):
-         final_state = "4mu"
-         h_nom_4mu.Fill(mass4l,weight_nom)
-      elif (abs(idL1-idL3)==2):
-         final_state = "2e2mu"
-         h_nom_2e2mu_e.Fill(mass4l,weight_nom)
-         h_nom_2e2mu_mu.Fill(mass4l,weight_nom)
-               
+      
       # Produce toy MC and add to integral yields
       for i_toy in range(0,n_toys):
-         if (final_state == "4e"):
-            yield_4e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.5)
-         elif (final_state == "4mu"):
-            yield_4mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.5)
-         elif (final_state == "2e2mu"):
-            yield_2e2mu_e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.5)
-            yield_2e2mu_mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.5)
+         if (idL1==11 and idL3==11):
+            yield_4e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+         elif (idL1==13 and idL3==13):
+            yield_4mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+         elif (abs(idL1-idL3)==2):
+            yield_2e2mu_e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+            yield_2e2mu_mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
                
    #Save all toy yields in histograms
    for i_toy in range(0,n_toys):
@@ -188,11 +170,7 @@ for Type in List:
 #  print '4mu +',round((hrecoup4mu.Integral()/hnom4mu.Integral()-1.0),3),'-',round((1.0-hrecodn4mu.Integral()/hnom4mu.Integral()),3)
 #  print '2e2mu el +',round((hrecoup2e2mu_e.Integral()/hnom2e2mu.Integral()-1.0),3),'-',round((1.0-hrecodn2e2mu_e.Integral()/hnom2e2mu.Integral()),3)
 #  print '2e2mu mu +',round((hrecoup2e2mu_mu.Integral()/hnom2e2mu.Integral()-1.0),3),'-',round((1.0-hrecodn2e2mu_mu.Integral()/hnom2e2mu.Integral()),3)
-   output=TFile.Open(Type+".root", "RECREATE")
-   h_nom_4e.Write()
-   h_nom_4mu.Write()
-   h_nom_2e2mu_e.Write()
-   h_nom_2e2mu_mu.Write()
+   output=TFile.Open(Type+"_Yield_var.root", "RECREATE")
    
    yield_4e.Write()
    yield_4mu.Write()
