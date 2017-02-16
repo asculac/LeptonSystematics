@@ -5,18 +5,21 @@ from ROOT import *
 gRandom.SetSeed(101)
 
 
-lumi = 35.8
+lumi = 35.876
 n_events = 10000 #number of events in tree to run on
 n_toys = 10 #number of toys to be generated for each lepton
 
-folder = './Moriond_2017/'
+folder = './Moriond_2017_v2/'
 file_name = '/ZZ4lAnalysis.root'
+output_file_name = "Yield_distributions.root"
 
 List = [
 'ggH125', #signal sample
-#'ZZTo4l', #backgroung sample
+'ZZTo4l', #backgroung sample
 #'ggTo4l'
 ]
+print "\n"
+output=TFile.Open(output_file_name, "RECREATE") #root file to save histograms
 
 for Type in List:
    
@@ -34,6 +37,7 @@ for Type in List:
    
    #Declare histograms where we store yields
    nbins_yields = 100
+   histo_width = 0.02
    tree.Draw("ZZMass >> h_nom" , "(abs(LepLepId[0]) == 11 && abs(LepLepId[3]) == 11)*overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
    nom_yield_4e = h_nom.Integral()
    
@@ -43,13 +47,16 @@ for Type in List:
    tree.Draw("ZZMass >> h_nom" , "(abs(abs(LepLepId[0]) - (LepLepId[3])) == 2)      *overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
    nom_yield_2e2mu = h_nom.Integral()
    
-   yield_4mu = TH1F("yield_4mu", "yield_4mu", nbins_yields, nom_yield_4mu - 0.5, nom_yield_4mu + 0.5)
+   yield_4mu = TH1F("yield_4mu_" + Type, "yield_4mu_" + Type, nbins_yields, ( 1 - histo_width ) * nom_yield_4mu , ( 1 + histo_width ) * nom_yield_4mu )
 
-   yield_4e = TH1F("yield_4e", "yield_4e", nbins_yields, nom_yield_4e - 0.5, nom_yield_4e + 0.5)
+   yield_4e = TH1F("yield_4e_" + Type, "yield_4e_" + Type, nbins_yields   , ( 1 - histo_width ) * nom_yield_4e,   ( 1 + histo_width ) * nom_yield_4e )
    
-   yield_2e2mu_e = TH1F("yield_2e2mu_e", "yield_2e2mu_e", nbins_yields, nom_yield_2e2mu - 0.5, nom_yield_2e2mu + 0.5)
+   yield_2e2mu_e = TH1F("yield_2e2mu_e_" + Type, "yield_2e2mu_e_" + Type, nbins_yields,    ( 1 - histo_width ) * nom_yield_2e2mu, ( 1 + histo_width ) * nom_yield_2e2mu )
    
-   yield_2e2mu_mu = TH1F("yield_2e2mu_mu", "yield_2e2mu_mu", nbins_yields, nom_yield_2e2mu - 0.5, nom_yield_2e2mu + 0.5)
+   yield_2e2mu_mu = TH1F("yield_2e2mu_mu_" + Type, "yield_2e2mu_mu_" + Type, nbins_yields, ( 1 - histo_width ) * nom_yield_2e2mu, ( 1 + histo_width ) * nom_yield_2e2mu )
+   
+   #control_histo_nom = TH1F("Lep_sf_nom_" + Type, "Lep_sf_nom_" + Type, 100, ( 1 - histo_width )  , ( 1 + histo_width )  )
+   #control_histo_var = TH1F("Lep_sf_var_" + Type, "Lep_sf_var_" + Type, 100, ( 1 - histo_width )  , ( 1 + histo_width )  )
 
    print "Processing {} ...".format(Type)
    br_data = 0
@@ -80,16 +87,62 @@ for Type in List:
       
       #Calculate nominal weigh using central value of SF
       weight_nom = event.overallEventWeight*1000*lumi*event.xsec/NGen
+      SF_tot_nom = event.dataMCWeight #nominal value of total SF, product of 4 lepton nominal SF
       
+      SF_lep_trig = []
+      err_lep_trig = []
+      SF_lep_reco = []
+      err_lep_reco = []
+      SF_lep_sel = []
+      err_lep_sel = []
+      
+      for i in range (0,4):
+         SF_lep_trig.append(0.)
+         err_lep_trig.append(0.)
+         SF_lep_reco.append(0.)
+         err_lep_reco.append(0.)
+         SF_lep_sel.append(0.)
+         err_lep_sel.append(0.)
+
       # Produce toy MC and add to integral yields
       for i_toy in range(0,n_toys):
+         SF_var = 1.
+         SF_var_e = 1.
+         SF_var_mu = 1.
+         
+         for i in range (0,4):
+            SF_lep_trig[i] = 1. #hard-code value for trigger SF at the moment
+            err_lep_trig[i] = 0. #hard-code value for trigger unc at the moment
+            SF_lep_reco[i] = event.LepRecoSF[i]
+            err_lep_reco[i] = event.LepRecoSF_Unc[i]
+            SF_lep_sel[i] = event.LepSelSF[i]
+            err_lep_sel[i] = event.LepSelSF_Unc[i]
+         
          if (idL1==11 and idL3==11):
-            yield_4e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+            # Vary SF of each lepton using gaus distribution with mean as SF nominal value and sigma as SF unc
+            #control_histo_nom.Fill(SF_lep_sel[0])
+            #control_histo_var.Fill(gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]))
+            for i in range (0,4):
+               SF_var *= gRandom.Gaus(SF_lep_trig[i], err_lep_trig[i]) * gRandom.Gaus(SF_lep_reco[i], err_lep_reco[i]) * gRandom.Gaus(SF_lep_sel[i], err_lep_sel[i])
+            yield_4e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
+
          elif (idL1==13 and idL3==13):
-            yield_4mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+            for i in range (0,4):
+               SF_var *= gRandom.Gaus(SF_lep_trig[i], err_lep_trig[i]) * gRandom.Gaus(SF_lep_reco[i], err_lep_reco[i]) * gRandom.Gaus(SF_lep_sel[i], err_lep_sel[i])
+            yield_4mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
+
          elif (abs(idL1-idL3)==2):
-            yield_2e2mu_e_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
-            yield_2e2mu_mu_sum[i_toy] += weight_nom/event.dataMCWeight * gRandom.Gaus(event.dataMCWeight, 0.1)
+            # Vary electron SF while fixing muon and vice-versa
+            if ( idL1 == 11):
+               SF_var_e = gRandom.Gaus(SF_lep_trig[0], err_lep_trig[0]) * gRandom.Gaus(SF_lep_reco[0], err_lep_reco[0]) * gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]) * gRandom.Gaus(SF_lep_trig[1], err_lep_trig[1]) * gRandom.Gaus(SF_lep_reco[1], err_lep_reco[1]) * gRandom.Gaus(SF_lep_sel[1], err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_mu = gRandom.Gaus(SF_lep_trig[2], err_lep_trig[2]) * gRandom.Gaus(SF_lep_reco[2], err_lep_reco[2]) * gRandom.Gaus(SF_lep_sel[2], err_lep_sel[2]) * gRandom.Gaus(SF_lep_trig[3], err_lep_trig[3]) * gRandom.Gaus(SF_lep_reco[3], err_lep_reco[3]) * gRandom.Gaus(SF_lep_sel[3], err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+            
+            elif ( idL1 == 13):
+               SF_var_mu = gRandom.Gaus(SF_lep_trig[0], err_lep_trig[0]) * gRandom.Gaus(SF_lep_reco[0], err_lep_reco[0]) * gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]) * gRandom.Gaus(SF_lep_trig[1], err_lep_trig[1]) * gRandom.Gaus(SF_lep_reco[1], err_lep_reco[1]) * gRandom.Gaus(SF_lep_sel[1], err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_e = gRandom.Gaus(SF_lep_trig[2], err_lep_trig[2]) * gRandom.Gaus(SF_lep_reco[2], err_lep_reco[2]) * gRandom.Gaus(SF_lep_sel[2], err_lep_sel[2]) * gRandom.Gaus(SF_lep_trig[3], err_lep_trig[3]) * gRandom.Gaus(SF_lep_reco[3], err_lep_reco[3]) * gRandom.Gaus(SF_lep_sel[3], err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+            
+            yield_2e2mu_e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_e
+            yield_2e2mu_mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_mu
                
    #Save all toy yields in histograms
    for i_toy in range(0,n_toys):
@@ -98,82 +151,19 @@ for Type in List:
       yield_2e2mu_e.Fill(yield_2e2mu_e_sum[i_toy])
       yield_2e2mu_mu.Fill(yield_2e2mu_mu_sum[i_toy])
 
-#      recoerre=1.0
-#      recoerrmu=1.0
-#
-#    # Reconstruction efficiencies errors
-#    for l in range(0,4):
-#      if abs(tree.lep_id[tree.lep_Hindex[l]])==11:
-#        # uncertainty on ID/Iso/SIP, stored in tree per lepton
-#        recoerre *= (1.0+gRandom.Gaus(0.0,abs(tree.lep_dataMCErr[tree.lep_Hindex[l]])))
-#        # uncertainty on GSF track eff. for crack electrons, hard coded
-#        if (abs(tree.lep_eta[tree.lep_Hindex[l]])>1.4442 and abs(tree.lep_eta[tree.lep_Hindex[l]])<1.566): 
-#          recoerre *= (1.0+gRandom.Gaus(0.0,0.08))
-#        # uncertainty on GSF track eff. for low pt non-crack electrons, hard coded
-#        elif (tree.lep_pt[tree.lep_Hindex[l]]<20): 
-#          recoerre *= (1.0+gRandom.Gaus(0.0,0.08))
-#        # uncertainty on GSF track eff. for high pt non-crack electrons, hard coded
-#        else:
-#          recoerre *= (1.0+gRandom.Gaus(0.0,0.04))
-#      else:
-#        # total uncertainty on low pt muons, hard coded
-#        if (tree.lep_pt[tree.lep_Hindex[l]]<10.0 or abs(tree.lep_eta[tree.lep_Hindex[l]])>2.0): recoerrmu *= (1.0+gRandom.Gaus(0.0,0.02))
-#        # total uncertainty on high pt muons, hard coded
-#        else: recoerrmu *= (1.0+gRandom.Gaus(0.0,0.005))    
-#
-#    if (recoerre<1.0): 
-#      recoerrupe=1.0/recoerre
-#      recoerrdne=recoerre
-#    else:
-#      recoerrupe=recoerre
-#      recoerrdne=(1.0/recoerre)
-#
-#    if (recoerrmu<1.0): 
-#      recoerrupmu=1.0/recoerrmu
-#      recoerrdnmu=recoerrmu
-#    else:
-#      recoerrupmu=recoerrmu
-#      recoerrdnmu=(1.0/recoerrmu)
-#
-#    # Trigger uncertainties, hard coded
-#    if(idL1==11 and idL3==11):
-#      recoerrupe = 1.0+sqrt((1.0-recoerrupe)**2+0.01**2)
-#      recoerrdne = 1.0-sqrt((1.0-recoerrdne)**2+0.04**2)
-#    if(idL1==13 and idL3==13):
-#      recoerrupmu = 1.0+sqrt((1.0-recoerrupmu)**2+0.00**2)
-#      recoerrdnmu = 1.0-sqrt((1.0-recoerrdnmu)**2+0.01**2)
-#    if(abs(idL1-idL3)==2):
-#      recoerrupe = 1.0+sqrt((1.0-recoerrupe)**2+0.01**2)
-#      recoerrdne = 1.0-sqrt((1.0-recoerrdne)**2+0.01**2)
-#      recoerrupmu = 1.0+sqrt((1.0-recoerrupmu)**2+0.01**2)
-#      recoerrdnmu = 1.0-sqrt((1.0-recoerrdnmu)**2+0.01**2)
-#
-#    if (idL1==11 and idL3==11): 
-#      hrecoup4e.Fill(mass4l,recoerrupe*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#      hrecodn4e.Fill(mass4l,recoerrdne*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#    elif (idL1==13 and idL3==13): 
-#      hrecoup4mu.Fill(mass4l,recoerrupmu*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#      hrecodn4mu.Fill(mass4l,recoerrdnmu*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#    elif (abs(idL1-idL3)==2): 
-#      hrecoup2e2mu_e.Fill(mass4l,recoerrupe*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#      hrecodn2e2mu_e.Fill(mass4l,recoerrdne*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#      hrecoup2e2mu_mu.Fill(mass4l,recoerrupmu*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#      hrecodn2e2mu_mu.Fill(mass4l,recoerrdnmu*dataMCWeight*genWeight*crossSection*(2763./sumweights))
-#
-#  #print Type,'Reco/Id'
-#  #print '4e +',round((hrecoup4e.Integral()/hnom4e.Integral()-1.0),3),'-',round((1.0-hrecodn4e.Integral()/hnom4e.Integral()),3)
-#  #print '4mu +',round((hrecoup4mu.Integral()/hnom4mu.Integral()-1.0),3),'-',round((1.0-hrecodn4mu.Integral()/hnom4mu.Integral()),3)
-#  #print '2e2mu +',round((hrecoup2e2mu.Integral()/hnom2e2mu.Integral()-1.0),3),'-',round((1.0-hrecodn2e2mu.Integral()/hnom2e2mu.Integral()),3)
-#
-#  print Type,'Reco/Id/Trig'
-#  print '4e +',round((hrecoup4e.Integral()/hnom4e.Integral()-1.0),3),'-',round((1.0-hrecodn4e.Integral()/hnom4e.Integral()),3)
-#  print '4mu +',round((hrecoup4mu.Integral()/hnom4mu.Integral()-1.0),3),'-',round((1.0-hrecodn4mu.Integral()/hnom4mu.Integral()),3)
-#  print '2e2mu el +',round((hrecoup2e2mu_e.Integral()/hnom2e2mu.Integral()-1.0),3),'-',round((1.0-hrecodn2e2mu_e.Integral()/hnom2e2mu.Integral()),3)
-#  print '2e2mu mu +',round((hrecoup2e2mu_mu.Integral()/hnom2e2mu.Integral()-1.0),3),'-',round((1.0-hrecodn2e2mu_mu.Integral()/hnom2e2mu.Integral()),3)
-   output=TFile.Open(Type+"_Yield_var.root", "RECREATE")
-   
+
+   output.cd()
    yield_4e.Write()
    yield_4mu.Write()
    yield_2e2mu_e.Write()
    yield_2e2mu_mu.Write()
-   output.Close()
+   #control_histo_nom.Write()
+   #control_histo_var.Write()
+
+   print "Processing of {} finished.".format(Type)
+   print "\n\n"
+
+output.Close()
+print "Done! Everything saved in {}.".format(output_file_name)
+
+
