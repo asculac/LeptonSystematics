@@ -6,7 +6,7 @@ gRandom.SetSeed(101)
 
 
 lumi = 35.876 # Set lumi to be used for MC scaling
-n_toys = 500 # Number of toys to be generated for each lepton
+n_toys = 100 # Number of toys to be generated for each lepton
 
 folder = './Moriond_2017_v2/' # Define input folder name
 file_name = '/ZZ4lAnalysis.root' # Define input dile name
@@ -15,7 +15,7 @@ output_file_name = "Yield_distributions.root"
 # List of samples to run on
 List = [
 'ggH125',
-'ZZTo4l',
+#'ZZTo4l',
 #'ggTo4l'
 ]
 print "\n"
@@ -113,6 +113,9 @@ for Type in List:
          SF_var = 1.
          SF_var_e = 1.
          SF_var_mu = 1.
+         var_trig = gRandom.Gaus(0.,1.)
+         var_reco = var_trig
+         var_sel = var_trig
          
          for i in range (0,4):
             # Read lepton SF and unc from tree
@@ -128,23 +131,23 @@ for Type in List:
             #control_histo_nom.Fill(SF_lep_sel[0])
             #control_histo_var.Fill(gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]))
             for i in range (0,4):
-               SF_var *= gRandom.Gaus(SF_lep_trig[i], err_lep_trig[i]) * gRandom.Gaus(SF_lep_reco[i], err_lep_reco[i]) * gRandom.Gaus(SF_lep_sel[i], err_lep_sel[i])
+               SF_var *= (SF_lep_trig[i] + var_trig*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel*err_lep_sel[i])
             yield_4e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
 
          elif (idL1==13 and idL3==13):
             for i in range (0,4):
-               SF_var *= gRandom.Gaus(SF_lep_trig[i], err_lep_trig[i]) * gRandom.Gaus(SF_lep_reco[i], err_lep_reco[i]) * gRandom.Gaus(SF_lep_sel[i], err_lep_sel[i])
+               SF_var *= (SF_lep_trig[i] + var_trig*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel*err_lep_sel[i])
             yield_4mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
 
          elif (abs(idL1-idL3)==2):
             # Vary electron SF while fixing muon and vice-versa
             if ( idL1 == 11):
-               SF_var_e = gRandom.Gaus(SF_lep_trig[0], err_lep_trig[0]) * gRandom.Gaus(SF_lep_reco[0], err_lep_reco[0]) * gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]) * gRandom.Gaus(SF_lep_trig[1], err_lep_trig[1]) * gRandom.Gaus(SF_lep_reco[1], err_lep_reco[1]) * gRandom.Gaus(SF_lep_sel[1], err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-               SF_var_mu = gRandom.Gaus(SF_lep_trig[2], err_lep_trig[2]) * gRandom.Gaus(SF_lep_reco[2], err_lep_reco[2]) * gRandom.Gaus(SF_lep_sel[2], err_lep_sel[2]) * gRandom.Gaus(SF_lep_trig[3], err_lep_trig[3]) * gRandom.Gaus(SF_lep_reco[3], err_lep_reco[3]) * gRandom.Gaus(SF_lep_sel[3], err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+               SF_var_e = (SF_lep_trig[0] + var_trig*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_mu = (SF_lep_trig[2] + var_trig*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
             elif ( idL1 == 13):
-               SF_var_mu = gRandom.Gaus(SF_lep_trig[0], err_lep_trig[0]) * gRandom.Gaus(SF_lep_reco[0], err_lep_reco[0]) * gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]) * gRandom.Gaus(SF_lep_trig[1], err_lep_trig[1]) * gRandom.Gaus(SF_lep_reco[1], err_lep_reco[1]) * gRandom.Gaus(SF_lep_sel[1], err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-               SF_var_e = gRandom.Gaus(SF_lep_trig[2], err_lep_trig[2]) * gRandom.Gaus(SF_lep_reco[2], err_lep_reco[2]) * gRandom.Gaus(SF_lep_sel[2], err_lep_sel[2]) * gRandom.Gaus(SF_lep_trig[3], err_lep_trig[3]) * gRandom.Gaus(SF_lep_reco[3], err_lep_reco[3]) * gRandom.Gaus(SF_lep_sel[3], err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+               SF_var_mu = (SF_lep_trig[0] + var_trig*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_e = (SF_lep_trig[2] + var_trig*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
             yield_2e2mu_e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_e
             yield_2e2mu_mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_mu
@@ -166,7 +169,7 @@ for Type in List:
    #control_histo_var.Write()
 
    print "Processing of {} finished.".format(Type)
-   print "\n\n"
+   print "\n"
 
 output.Close()
 print "Done! Everything saved in {}.".format(output_file_name)
