@@ -5,39 +5,38 @@ from ROOT import *
 gRandom.SetSeed(101)
 
 
-lumi = 35.876
-n_events = 10000 #number of events in tree to run on
-n_toys = 10 #number of toys to be generated for each lepton
+lumi = 35.876 # Set lumi to be used for MC scaling
+n_toys = 500 # Number of toys to be generated for each lepton
 
-folder = './Moriond_2017_v2/'
-file_name = '/ZZ4lAnalysis.root'
+folder = './Moriond_2017_v2/' # Define input folder name
+file_name = '/ZZ4lAnalysis.root' # Define input dile name
 output_file_name = "Yield_distributions.root"
 
+# List of samples to run on
 List = [
-'ggH125', #signal sample
-'ZZTo4l', #backgroung sample
+'ggH125',
+'ZZTo4l',
 #'ggTo4l'
 ]
 print "\n"
-output=TFile.Open(output_file_name, "RECREATE") #root file to save histograms
+output=TFile.Open(output_file_name, "RECREATE") # root file to save histograms
 
 for Type in List:
-   
+   # Open the root file and get tree
    mc=TFile.Open(folder+Type+file_name)
    tree = mc.Get("ZZTree/candTree")
    counters = mc.Get("ZZTree/Counters")
    NGen = counters.GetBinContent(40)
 
-   nbins=35 #number of bins in histogram
-   lo=105   #Mass range for yields
+   # Set mass range and resolution
+   lo=105
    hi=140
+   nbins=(hi-lo)*1 # 1 GeV resolution
 
-   #Declare histogram to calculate nominal value of yields
+
+   # Calculate central value of yield so we know how to center variation histograms
    h_nom = TH1F("h_nom", "h_nom", nbins, lo, hi)
    
-   #Declare histograms where we store yields
-   nbins_yields = 100
-   histo_width = 0.02
    tree.Draw("ZZMass >> h_nom" , "(abs(LepLepId[0]) == 11 && abs(LepLepId[3]) == 11)*overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
    nom_yield_4e = h_nom.Integral()
    
@@ -46,6 +45,10 @@ for Type in List:
    
    tree.Draw("ZZMass >> h_nom" , "(abs(abs(LepLepId[0]) - (LepLepId[3])) == 2)      *overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
    nom_yield_2e2mu = h_nom.Integral()
+   
+   #Declare histograms where we store varied yields
+   nbins_yields = 100
+   histo_width = 0.02
    
    yield_4mu = TH1F("yield_4mu_" + Type, "yield_4mu_" + Type, nbins_yields, ( 1 - histo_width ) * nom_yield_4mu , ( 1 + histo_width ) * nom_yield_4mu )
 
@@ -61,7 +64,7 @@ for Type in List:
    print "Processing {} ...".format(Type)
    br_data = 0
    
-   #Set yields for toys to zero
+   # Set yields for toys to zero
    yield_4e_sum = []
    yield_4mu_sum = []
    yield_2e2mu_e_sum = []
@@ -73,21 +76,22 @@ for Type in List:
       yield_2e2mu_e_sum.append(0.)
       yield_2e2mu_mu_sum.append(0.)
 
-   for event in tree:#loop over all events in tree
+   for event in tree:# Loop over all events in tree
       br_data+=1
       if(br_data % int((tree.GetEntries()/10)) == 0):
          print "{} %".format(str(100*br_data/tree.GetEntries() + 1))
       
       mass4l = tree.ZZMass
-      if( mass4l < 105. or mass4l > 140.): continue #Skip events that are not in the mass window
+      if( mass4l < 105. or mass4l > 140.): continue # Skip events that are not in the mass window
       idL1 = abs(tree.LepLepId[0])
       idL3 = abs(tree.LepLepId[3])
     
       GENmassZZ = tree.GenHMass
       
-      #Calculate nominal weigh using central value of SF
+      # Calculate nominal weigh using central value of SF
       weight_nom = event.overallEventWeight*1000*lumi*event.xsec/NGen
-      SF_tot_nom = event.dataMCWeight #nominal value of total SF, product of 4 lepton nominal SF
+      # Nominal value of total SF, product of 4 lepton nominal SF
+      SF_tot_nom = event.dataMCWeight
       
       SF_lep_trig = []
       err_lep_trig = []
@@ -111,6 +115,7 @@ for Type in List:
          SF_var_mu = 1.
          
          for i in range (0,4):
+            # Read lepton SF and unc from tree
             SF_lep_trig[i] = 1. #hard-code value for trigger SF at the moment
             err_lep_trig[i] = 0. #hard-code value for trigger unc at the moment
             SF_lep_reco[i] = event.LepRecoSF[i]
@@ -165,5 +170,3 @@ for Type in List:
 
 output.Close()
 print "Done! Everything saved in {}.".format(output_file_name)
-
-
