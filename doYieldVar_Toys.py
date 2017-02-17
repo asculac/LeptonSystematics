@@ -6,11 +6,11 @@ gRandom.SetSeed(101)
 
 
 lumi = 35.876 # Set lumi to be used for MC scaling
-n_toys = 200 # Number of toys to be generated for each lepton
+n_toys = 1 # Number of toys to be generated for each lepton
 
-folder = './Moriond_2017_v2/' # Define input folder name
+folder = '/afs/cern.ch/work/t/tsculac/Moriond_2017/CMSSW_8_0_21/src/LeptonSystematics/Moriond_2017_v2/' # Define input folder name
 file_name = '/ZZ4lAnalysis.root' # Define input dile name
-output_file_name = "Yield_distributions.root"
+output_file_name = "Yield_"+str(n_toys)+"_toys.root"
 
 # List of samples to run on
 List = [
