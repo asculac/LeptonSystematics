@@ -6,7 +6,7 @@ gRandom.SetSeed(101)
 
 
 lumi = 35.876 # Set lumi to be used for MC scaling
-n_toys = 100 # Number of toys to be generated for each lepton
+n_toys = 200 # Number of toys to be generated for each lepton
 
 folder = './Moriond_2017_v2/' # Define input folder name
 file_name = '/ZZ4lAnalysis.root' # Define input dile name
@@ -18,7 +18,7 @@ List = [
 #'ZZTo4l',
 #'ggTo4l'
 ]
-print "\n"
+
 output=TFile.Open(output_file_name, "RECREATE") # root file to save histograms
 
 for Type in List:
@@ -48,7 +48,7 @@ for Type in List:
    
    #Declare histograms where we store varied yields
    nbins_yields = 100
-   histo_width = 0.02
+   histo_width = 0.15
    
    yield_4mu = TH1F("yield_4mu_" + Type, "yield_4mu_" + Type, nbins_yields, ( 1 - histo_width ) * nom_yield_4mu , ( 1 + histo_width ) * nom_yield_4mu )
 
@@ -69,12 +69,18 @@ for Type in List:
    yield_4mu_sum = []
    yield_2e2mu_e_sum = []
    yield_2e2mu_mu_sum = []
+   var_trig = []
+   var_reco = []
+   var_sel = []
    
    for i_toy in range(0,n_toys):
       yield_4e_sum.append(0.)
       yield_4mu_sum.append(0.)
       yield_2e2mu_e_sum.append(0.)
       yield_2e2mu_mu_sum.append(0.)
+      var_trig.append(gRandom.Gaus(0.,1.));
+      var_reco.append(gRandom.Gaus(0.,1.));
+      var_sel.append(gRandom.Gaus(0.,1.));
 
    for event in tree:# Loop over all events in tree
       br_data+=1
@@ -113,9 +119,6 @@ for Type in List:
          SF_var = 1.
          SF_var_e = 1.
          SF_var_mu = 1.
-         var_trig = gRandom.Gaus(0.,1.)
-         var_reco = var_trig
-         var_sel = var_trig
          
          for i in range (0,4):
             # Read lepton SF and unc from tree
@@ -126,32 +129,33 @@ for Type in List:
             SF_lep_sel[i] = event.LepSelSF[i]
             err_lep_sel[i] = event.LepSelSF_Unc[i]
          
+         
          if (idL1==11 and idL3==11):
             # Vary SF of each lepton using gaus distribution with mean as SF nominal value and sigma as SF unc
             #control_histo_nom.Fill(SF_lep_sel[0])
             #control_histo_var.Fill(gRandom.Gaus(SF_lep_sel[0], err_lep_sel[0]))
             for i in range (0,4):
-               SF_var *= (SF_lep_trig[i] + var_trig*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel*err_lep_sel[i])
+               SF_var *= (SF_lep_trig[i] + var_trig[i_toy]*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco[i_toy]*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel[i_toy]*err_lep_sel[i])
             yield_4e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
 
          elif (idL1==13 and idL3==13):
             for i in range (0,4):
-               SF_var *= (SF_lep_trig[i] + var_trig*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel*err_lep_sel[i])
+               SF_var *= (SF_lep_trig[i] + var_trig[i_toy]*err_lep_trig[i]) * (SF_lep_reco[i] +var_reco[i_toy]*err_lep_reco[i]) * (SF_lep_sel[i] + var_sel[i_toy]*err_lep_sel[i])
             yield_4mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var
 
          elif (abs(idL1-idL3)==2):
             # Vary electron SF while fixing muon and vice-versa
             if ( idL1 == 11):
-               SF_var_e = (SF_lep_trig[0] + var_trig*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-               SF_var_mu = (SF_lep_trig[2] + var_trig*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+               SF_var_e  = (SF_lep_trig[0] + var_trig[i_toy]*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco[i_toy]*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel[i_toy]*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig[i_toy]*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco[i_toy]*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel[i_toy]*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_mu = (SF_lep_trig[2] + var_trig[i_toy]*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco[i_toy]*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel[i_toy]*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig[i_toy]*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco[i_toy]*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel[i_toy]*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
             elif ( idL1 == 13):
-               SF_var_mu = (SF_lep_trig[0] + var_trig*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-               SF_var_e = (SF_lep_trig[2] + var_trig*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+               SF_var_mu = (SF_lep_trig[0] + var_trig[i_toy]*err_lep_trig[0]) * (SF_lep_reco[0] + var_reco[i_toy]*err_lep_reco[0]) * (SF_lep_sel[0] + var_sel[i_toy]*err_lep_sel[0]) * (SF_lep_trig[1] + var_trig[i_toy]*err_lep_trig[1]) * (SF_lep_reco[1] + var_reco[i_toy]*err_lep_reco[1]) * (SF_lep_sel[1] + var_sel[i_toy]*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_e  = (SF_lep_trig[2] + var_trig[i_toy]*err_lep_trig[2]) * (SF_lep_reco[2] + var_reco[i_toy]*err_lep_reco[2]) * (SF_lep_sel[2] + var_sel[i_toy]*err_lep_sel[2]) * (SF_lep_trig[3] + var_trig[i_toy]*err_lep_trig[3]) * (SF_lep_reco[3] + var_reco[i_toy]*err_lep_reco[3]) * (SF_lep_sel[3] + var_sel[i_toy]*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
             yield_2e2mu_e_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_e
             yield_2e2mu_mu_sum[i_toy] += weight_nom/SF_tot_nom * SF_var_mu
-               
+   
    #Save all toy yields in histograms
    for i_toy in range(0,n_toys):
       yield_4e.Fill(yield_4e_sum[i_toy])
