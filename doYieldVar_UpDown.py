@@ -41,21 +41,35 @@ for Type in List:
    
    tree.Draw("ZZMass >> h_nom" , "(abs(abs(LepLepId[0]) - (LepLepId[3])) == 2)      *overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
    nom_yield_2e2mu = h_nom.Integral()
-   
 
    print "Processing {} ...".format(Type)
    br_data = 0
    
    # Set yields for toys to zero
-   yield_4e_up = 0.
-   yield_4mu_up = 0.
-   yield_2e2mu_e_up = 0.
-   yield_2e2mu_mu_up = 0.
+   yield_4e_up = []
+   yield_4mu_up = []
+   yield_2e2mu_e_up = []
+   yield_2e2mu_mu_up = []
+   yield_4e_dn = []
+   yield_4mu_dn = []
+   yield_2e2mu_e_dn = []
+   yield_2e2mu_mu_dn = []
    
-   yield_4e_dn = 0.
-   yield_4mu_dn = 0.
-   yield_2e2mu_e_dn = 0.
-   yield_2e2mu_mu_dn = 0.
+   # Uncrrelate effect of trigger/reco/selection
+   variation_name = []
+   variation_name.append("TRIGGER")
+   variation_name.append("RECO")
+   variation_name.append("SELECTION")
+   for k in range (0,3):
+      yield_4e_up.append(0.)
+      yield_4mu_up.append(0.)
+      yield_2e2mu_e_up.append(0.)
+      yield_2e2mu_mu_up.append(0.)
+      yield_4e_dn.append(0.)
+      yield_4mu_dn.append(0.)
+      yield_2e2mu_e_dn.append(0.)
+      yield_2e2mu_mu_dn.append(0.)
+   
    
 
    for event in tree:# Loop over all events in tree
@@ -98,67 +112,83 @@ for Type in List:
          err_lep_reco[i] = event.LepRecoSF_Unc[i]
          SF_lep_sel[i] = event.LepSelSF[i]
          err_lep_sel[i] = event.LepSelSF_Unc[i]
-      
-      SF_var_up = 1.
-      SF_var_dn = 1.
-      SF_var_e_up = 1.
-      SF_var_e_dn = 1.
-      SF_var_mu_up = 1.
-      SF_var_mu_dn = 1.
-      
-      if (idL1==11 and idL3==11):
-         # Vary SF of each lepton up and down
-         for i in range (0,4):
-            SF_var_up *= (SF_lep_trig[i] + err_lep_trig[i]) * (SF_lep_reco[i] + err_lep_reco[i]) * (SF_lep_sel[i] + err_lep_sel[i])
-            SF_var_dn *= (SF_lep_trig[i] - err_lep_trig[i]) * (SF_lep_reco[i] - err_lep_reco[i]) * (SF_lep_sel[i] - err_lep_sel[i])
-         yield_4e_up += weight_nom/SF_tot_nom * SF_var_up
-         yield_4e_dn += weight_nom/SF_tot_nom * SF_var_dn
 
-      elif (idL1==13 and idL3==13):
-         for i in range (0,4):
-            SF_var_up *= (SF_lep_trig[i] + err_lep_trig[i]) * (SF_lep_reco[i] + err_lep_reco[i]) * (SF_lep_sel[i] + err_lep_sel[i])
-            SF_var_dn *= (SF_lep_trig[i] - err_lep_trig[i]) * (SF_lep_reco[i] - err_lep_reco[i]) * (SF_lep_sel[i] - err_lep_sel[i])
-         yield_4mu_up += weight_nom/SF_tot_nom * SF_var_up
-         yield_4mu_dn += weight_nom/SF_tot_nom * SF_var_dn
+      for k in range (0,3):
+         
+         if(k==0):
+            TRIG = 1
+            RECO = 0
+            SEL  = 0
+         elif(k==1):
+            TRIG = 0
+            RECO = 1
+            SEL  = 0
+         elif(k==2):
+            TRIG = 0
+            RECO = 0
+            SEL  = 1
 
-      elif (abs(idL1-idL3)==2):
-         # Vary electron SF while fixing muon and vice-versa
-         if ( idL1 == 11):
-            SF_var_e_up  = (SF_lep_trig[0] + err_lep_trig[0]) * (SF_lep_reco[0] + err_lep_reco[0]) * (SF_lep_sel[0] + err_lep_sel[0]) * (SF_lep_trig[1] + err_lep_trig[1]) * (SF_lep_reco[1] + err_lep_reco[1]) * (SF_lep_sel[1] + err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-            SF_var_mu_up = (SF_lep_trig[2] + err_lep_trig[2]) * (SF_lep_reco[2] + err_lep_reco[2]) * (SF_lep_sel[2] + err_lep_sel[2]) * (SF_lep_trig[3] + err_lep_trig[3]) * (SF_lep_reco[3] + err_lep_reco[3]) * (SF_lep_sel[3] + err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+         SF_var_up = 1.
+         SF_var_dn = 1.
+         SF_var_e_up = 1.
+         SF_var_e_dn = 1.
+         SF_var_mu_up = 1.
+         SF_var_mu_dn = 1.
          
-            SF_var_e_dn  = (SF_lep_trig[0] - err_lep_trig[0]) * (SF_lep_reco[0] - err_lep_reco[0]) * (SF_lep_sel[0] - err_lep_sel[0]) * (SF_lep_trig[1] - err_lep_trig[1]) * (SF_lep_reco[1] - err_lep_reco[1]) * (SF_lep_sel[1] - err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-            SF_var_mu_dn = (SF_lep_trig[2] - err_lep_trig[2]) * (SF_lep_reco[2] - err_lep_reco[2]) * (SF_lep_sel[2] - err_lep_sel[2]) * (SF_lep_trig[3] - err_lep_trig[3]) * (SF_lep_reco[3] - err_lep_reco[3]) * (SF_lep_sel[3] - err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
-         
-         elif ( idL1 == 13):
-            SF_var_mu_up  = (SF_lep_trig[0] + err_lep_trig[0]) * (SF_lep_reco[0] + err_lep_reco[0]) * (SF_lep_sel[0] + err_lep_sel[0]) * (SF_lep_trig[1] + err_lep_trig[1]) * (SF_lep_reco[1] + err_lep_reco[1]) * (SF_lep_sel[1] + err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-            SF_var_e_up = (SF_lep_trig[2] + err_lep_trig[2]) * (SF_lep_reco[2] + err_lep_reco[2]) * (SF_lep_sel[2] + err_lep_sel[2]) * (SF_lep_trig[3] + err_lep_trig[3]) * (SF_lep_reco[3] + err_lep_reco[3]) * (SF_lep_sel[3] + err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+         if (idL1==11 and idL3==11):
+            # Vary SF of each lepton up and down
+            for i in range (0,4):
+               SF_var_up *= (SF_lep_trig[i] + TRIG*err_lep_trig[i]) * (SF_lep_reco[i] + RECO*err_lep_reco[i]) * (SF_lep_sel[i] + SEL*err_lep_sel[i])
+               SF_var_dn *= (SF_lep_trig[i] - TRIG*err_lep_trig[i]) * (SF_lep_reco[i] - RECO*err_lep_reco[i]) * (SF_lep_sel[i] - SEL*err_lep_sel[i])
+            yield_4e_up[k] += weight_nom/SF_tot_nom * SF_var_up
+            yield_4e_dn[k] += weight_nom/SF_tot_nom * SF_var_dn
+
+         elif (idL1==13 and idL3==13):
+            for i in range (0,4):
+               SF_var_up *= (SF_lep_trig[i] + TRIG*err_lep_trig[i]) * (SF_lep_reco[i] + RECO*err_lep_reco[i]) * (SF_lep_sel[i] + SEL*err_lep_sel[i])
+               SF_var_dn *= (SF_lep_trig[i] - TRIG*err_lep_trig[i]) * (SF_lep_reco[i] - RECO*err_lep_reco[i]) * (SF_lep_sel[i] - SEL*err_lep_sel[i])
+            yield_4mu_up[k] += weight_nom/SF_tot_nom * SF_var_up
+            yield_4mu_dn[k] += weight_nom/SF_tot_nom * SF_var_dn
+
+         elif (abs(idL1-idL3)==2):
+            # Vary electron SF while fixing muon and vice-versa
+            if ( idL1 == 11):
+               SF_var_e_up  = (SF_lep_trig[0] + TRIG*err_lep_trig[0]) * (SF_lep_reco[0] + RECO*err_lep_reco[0]) * (SF_lep_sel[0] + SEL*err_lep_sel[0]) * (SF_lep_trig[1] + TRIG*err_lep_trig[1]) * (SF_lep_reco[1] + RECO*err_lep_reco[1]) * (SF_lep_sel[1] + SEL*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_mu_up = (SF_lep_trig[2] + TRIG*err_lep_trig[2]) * (SF_lep_reco[2] + RECO*err_lep_reco[2]) * (SF_lep_sel[2] + SEL*err_lep_sel[2]) * (SF_lep_trig[3] + TRIG*err_lep_trig[3]) * (SF_lep_reco[3] + RECO*err_lep_reco[3]) * (SF_lep_sel[3] + SEL*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
-            SF_var_mu_dn  = (SF_lep_trig[0] - err_lep_trig[0]) * (SF_lep_reco[0] - err_lep_reco[0]) * (SF_lep_sel[0] - err_lep_sel[0]) * (SF_lep_trig[1] - err_lep_trig[1]) * (SF_lep_reco[1] - err_lep_reco[1]) * (SF_lep_sel[1] - err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
-            SF_var_e_dn = (SF_lep_trig[2] - err_lep_trig[2]) * (SF_lep_reco[2] - err_lep_reco[2]) * (SF_lep_sel[2] - err_lep_sel[2]) * (SF_lep_trig[3] - err_lep_trig[3]) * (SF_lep_reco[3] - err_lep_reco[3]) * (SF_lep_sel[3] - err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
-         
-         yield_2e2mu_e_up  += weight_nom/SF_tot_nom * SF_var_e_up
-         yield_2e2mu_mu_up += weight_nom/SF_tot_nom * SF_var_mu_up
+               SF_var_e_dn  = (SF_lep_trig[0] - TRIG*err_lep_trig[0]) * (SF_lep_reco[0] - RECO*err_lep_reco[0]) * (SF_lep_sel[0] - SEL*err_lep_sel[0]) * (SF_lep_trig[1] - TRIG*err_lep_trig[1]) * (SF_lep_reco[1] - RECO*err_lep_reco[1]) * (SF_lep_sel[1] - SEL*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_mu_dn = (SF_lep_trig[2] - TRIG*err_lep_trig[2]) * (SF_lep_reco[2] - RECO*err_lep_reco[2]) * (SF_lep_sel[2] - SEL*err_lep_sel[2]) * (SF_lep_trig[3] - TRIG*err_lep_trig[3]) * (SF_lep_reco[3] - RECO*err_lep_reco[3]) * (SF_lep_sel[3] - SEL*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
             
-         yield_2e2mu_e_dn  += weight_nom/SF_tot_nom * SF_var_e_dn
-         yield_2e2mu_mu_dn += weight_nom/SF_tot_nom * SF_var_mu_dn
+            elif ( idL1 == 13):
+               SF_var_mu_up  = (SF_lep_trig[0] + TRIG*err_lep_trig[0]) * (SF_lep_reco[0] + RECO*err_lep_reco[0]) * (SF_lep_sel[0] + SEL*err_lep_sel[0]) * (SF_lep_trig[1] + TRIG*err_lep_trig[1]) * (SF_lep_reco[1] + RECO*err_lep_reco[1]) * (SF_lep_sel[1] + SEL*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_e_up   = (SF_lep_trig[2] + TRIG*err_lep_trig[2]) * (SF_lep_reco[2] + RECO*err_lep_reco[2]) * (SF_lep_sel[2] + SEL*err_lep_sel[2]) * (SF_lep_trig[3] + TRIG*err_lep_trig[3]) * (SF_lep_reco[3] + RECO*err_lep_reco[3]) * (SF_lep_sel[3] + SEL*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+               
+               SF_var_mu_dn  = (SF_lep_trig[0] - TRIG*err_lep_trig[0]) * (SF_lep_reco[0] - RECO*err_lep_reco[0]) * (SF_lep_sel[0] - SEL*err_lep_sel[0]) * (SF_lep_trig[1] - TRIG*err_lep_trig[1]) * (SF_lep_reco[1] - RECO*err_lep_reco[1]) * (SF_lep_sel[1] - SEL*err_lep_sel[1]) * SF_lep_trig[2] * SF_lep_reco[2] * SF_lep_sel[2] * SF_lep_trig[3] * SF_lep_reco[3] * SF_lep_sel[3]
+               SF_var_e_dn   = (SF_lep_trig[2] - TRIG*err_lep_trig[2]) * (SF_lep_reco[2] - RECO*err_lep_reco[2]) * (SF_lep_sel[2] - SEL*err_lep_sel[2]) * (SF_lep_trig[3] - TRIG*err_lep_trig[3]) * (SF_lep_reco[3] - RECO*err_lep_reco[3]) * (SF_lep_sel[3] - SEL*err_lep_sel[3]) * SF_lep_trig[0] * SF_lep_reco[0] * SF_lep_sel[0] * SF_lep_trig[1] * SF_lep_reco[1] * SF_lep_sel[1]
+            
+            yield_2e2mu_e_up[k]  += weight_nom/SF_tot_nom * SF_var_e_up
+            yield_2e2mu_mu_up[k] += weight_nom/SF_tot_nom * SF_var_mu_up
+               
+            yield_2e2mu_e_dn[k]  += weight_nom/SF_tot_nom * SF_var_e_dn
+            yield_2e2mu_mu_dn[k] += weight_nom/SF_tot_nom * SF_var_mu_dn
 
-#   print "4e"
-#   print "Nominal yield = {} Yield up = {} Yields down = {}".format(nom_yield_4e,yield_4e_up,yield_4e_dn)
-#   print "\n"
-#   print "4mu"
-#   print "Nominal yield = {} Yield up = {} Yields down = {}".format(nom_yield_4mu,yield_4mu_up,yield_4mu_dn)
-#   print "\n"
-#   print "2e2mu"
-#   print "Muons"
-#   print "Nominal yield = {} Yield up = {} Yields down = {}".format(nom_yield_2e2mu,yield_2e2mu_mu_up,yield_2e2mu_mu_dn)
-#   print "Electrons"
-#   print "Nominal yield = {} Yield up = {} Yields down = {}".format(nom_yield_2e2mu,yield_2e2mu_e_up,yield_2e2mu_e_dn)
-#   print "\n"
+   comb_4e = 0.
+   comb_4mu = 0.
+   comb_2e2mu_e = 0.
+   comb_2e2mu_mu = 0.
+   for k in range (0,3):
+      comb_4e += ((yield_4e_up[k]-nom_yield_4e)/nom_yield_4e*100)**2
+      comb_4mu += ((yield_4mu_up[k]-nom_yield_4mu)/nom_yield_4mu*100)**2
+      comb_2e2mu_e += ((yield_2e2mu_e_up[k]-nom_yield_2e2mu)/nom_yield_2e2mu*100)**2
+      comb_2e2mu_mu += ((yield_2e2mu_mu_up[k]-nom_yield_2e2mu)/nom_yield_2e2mu*100)**2
+      
+      print "LEPTON UNCERTAINTIES FOR {} IN {} SAMPLE".format(variation_name[k],Type)
+      print "4e = {:.1f} % 4mu = {:.1f}%".format(((yield_4e_up[k]-nom_yield_4e)/nom_yield_4e*100),((yield_4mu_up[k]-nom_yield_4mu)/nom_yield_4mu*100))
+      print "2e2mu/ele = {:.1f} % 2e2mu/mu = {:.1f} %".format(((yield_2e2mu_e_up[k]-nom_yield_2e2mu)/nom_yield_2e2mu*100),((yield_2e2mu_mu_up[k]-nom_yield_2e2mu)/nom_yield_2e2mu*100))
 
-   print "LEPTON UNCERTAINTIES"
-   print "4e = {:.1f} % 4mu = {:.1f}%".format(((yield_4e_up-nom_yield_4e)/nom_yield_4e*100),((yield_4mu_up-nom_yield_4mu)/nom_yield_4mu*100))
-   print "2e2mu/ele = {:.1f} % 2e2mu/mu = {:.1f} %".format(((yield_2e2mu_e_up-nom_yield_2e2mu)/nom_yield_2e2mu*100),((yield_2e2mu_mu_up-nom_yield_2e2mu)/nom_yield_2e2mu*100))
+   print "COMBINATION"
+   print "4e = {:.1f} % 4mu = {:.1f}%".format(comb_4e**0.5,comb_4mu**0.5)
+   print "2e2mu/ele = {:.1f} % 2e2mu/mu = {:.1f} %".format(comb_2e2mu_e**0.5,comb_2e2mu_mu**0.5)
 
 
 
