@@ -113,8 +113,36 @@ for Type in List:
       for i in range (0,4):
          # Read lepton SF and unc from tree
          SF_lep_trig[i] = 1. #hard-code value for trigger SF at the moment
-         err_lep_trig_up[i] = 0. #hard-code value for trigger unc at the moment
-         err_lep_trig_dn[i] = 0.
+         if(i == 0):
+            if(idL1==11 and idL3==11 and event.LepPt[3] < 12):
+               err_lep_trig_up[i] = 0.01
+               err_lep_trig_dn[i] = 0.11
+            if(idL1==11 and idL3==11 and event.LepPt[3] >= 12):
+               err_lep_trig_up[i] = 0.005
+               err_lep_trig_dn[i] = 0.01
+
+            if(idL1==13 and idL3==13 and event.LepPt[3] < 7):
+               err_lep_trig_up[i] = 0.001
+               err_lep_trig_dn[i] = 0.032
+            if(idL1==13 and idL3==13 and event.LepPt[3] >= 7 and event.LepPt[3] < 12):
+               err_lep_trig_up[i] = 0.001
+               err_lep_trig_dn[i] = 0.015
+            if(idL1==13 and idL3==13 and event.LepPt[3] >= 12):
+               err_lep_trig_up[i] = 0.001
+               err_lep_trig_dn[i] = 0.015
+                  
+            if(abs(idL1-idL3)==2 and event.LepPt[3] < 7):
+               err_lep_trig_up[i] = 0.005
+               err_lep_trig_dn[i] = 0.08
+            if(abs(idL1-idL3)==2 and event.LepPt[3] >= 7 and event.LepPt[3] < 12):
+               err_lep_trig_up[i] = 0.005
+               err_lep_trig_dn[i] = 0.032
+            if(abs(idL1-idL3)==2 and event.LepPt[3] >= 12):
+               err_lep_trig_up[i] = 0.001
+               err_lep_trig_dn[i] = 0.010
+         else:
+            err_lep_trig_up[i] = 0.
+            err_lep_trig_dn[i] = 0.
          SF_lep_reco[i] = event.LepRecoSF[i]
          err_lep_reco_up[i] = event.LepRecoSF_Unc[i]
          err_lep_reco_dn[i] = event.LepRecoSF_Unc[i]
