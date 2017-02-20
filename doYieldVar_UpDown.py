@@ -13,8 +13,8 @@ file_name = '/ZZ4lAnalysis.root' # Define input dile name
 # List of samples to run on
 List = [
 'ggH125',
-#'ZZTo4l',
-#'ggTo4l'
+'ZZTo4l',
+'ggTo4l'
 ]
 
 for Type in List:
@@ -30,7 +30,7 @@ for Type in List:
    nbins=(hi-lo)*1 # 1 GeV resolution
 
 
-   # Calculate central value of yield so we know how to center variation histograms
+   # Calculate nominal value of yield
    h_nom = TH1F("h_nom", "h_nom", nbins, lo, hi)
    
    tree.Draw("ZZMass >> h_nom" , "(abs(LepLepId[0]) == 11 && abs(LepLepId[3]) == 11)*overallEventWeight*1000*xsec*"+str(lumi)+"/"+str(NGen))
@@ -45,7 +45,7 @@ for Type in List:
    print "Processing {} ...".format(Type)
    br_data = 0
    
-   # Set yields for toys to zero
+   # Set yields for up and dn variations to zero
    yield_4e_up = []
    yield_4mu_up = []
    yield_2e2mu_e_up = []
@@ -111,8 +111,8 @@ for Type in List:
          err_lep_sel_dn.append(0.)
          
       for i in range (0,4):
-         # Read lepton SF and unc from tree
-         SF_lep_trig[i] = 1. #hard-code value for trigger SF at the moment
+         # Hard-code trigger SF and unc
+         SF_lep_trig[i] = 1.
          if(i == 0):
             if(idL1==11 and idL3==11 and event.LepPt[3] < 12):
                err_lep_trig_up[i] = 0.01
@@ -143,6 +143,7 @@ for Type in List:
          else:
             err_lep_trig_up[i] = 0.
             err_lep_trig_dn[i] = 0.
+         # Load reco and selection SF and unc
          SF_lep_reco[i] = event.LepRecoSF[i]
          err_lep_reco_up[i] = event.LepRecoSF_Unc[i]
          err_lep_reco_dn[i] = event.LepRecoSF_Unc[i]
@@ -151,7 +152,7 @@ for Type in List:
          err_lep_sel_dn[i] = event.LepSelSF_Unc[i]
 
       for k in range (0,3):
-         
+         # Calculate each variation independently
          if(k==0):
             TRIG = 1
             RECO = 0
@@ -219,6 +220,7 @@ for Type in List:
    comb_2e2mu_e_dn = 0.
    comb_2e2mu_mu_dn = 0.
 
+   # Sum relative uncertainties in quadrature
    for k in range (0,3):
       comb_4e_up += ((yield_4e_up[k]-nom_yield_4e)/nom_yield_4e*100)**2
       comb_4mu_up += ((yield_4mu_up[k]-nom_yield_4mu)/nom_yield_4mu*100)**2
@@ -230,6 +232,7 @@ for Type in List:
       comb_2e2mu_e_dn += ((-yield_2e2mu_e_dn[k]+nom_yield_2e2mu)/nom_yield_2e2mu*100)**2
       comb_2e2mu_mu_dn += ((-yield_2e2mu_mu_dn[k]+nom_yield_2e2mu)/nom_yield_2e2mu*100)**2
       
+      # Print the results
       print "============================================================"
       print "| LEPTON UNCERTAINTIES FOR {} IN {} SAMPLE |".format(variation_name[k],Type)
       print "============================================================"
@@ -241,6 +244,7 @@ for Type in List:
    print "==============="
    print "4e = +{:.1f}% -{:.1f}%  4mu = +{:.1f}% -{:.1f}%".format(comb_4e_up**0.5,comb_4e_dn**0.5,comb_4mu_up**0.5,comb_4mu_dn**0.5)
    print "2e2mu/ele = +{:.1f}% -{:.1f}% 2e2mu/mu = +{:.1f}% -{:.1f}%".format(comb_2e2mu_e_up**0.5,comb_2e2mu_e_dn**0.5,comb_2e2mu_mu_up**0.5,comb_2e2mu_mu_dn**0.5)
+   print "=============================================================="
 
 
 
